@@ -24,8 +24,14 @@ type ChromeExtendWebDriver struct {
 
 //代理服务器截获的数据
 type ProxyData struct {
-	data     string //数据内容
-	fileName string //文件名
+	Data     string //数据内容
+	FileName string //文件名
+	//General         string
+	RequestMethod string //从Request中拆分出来，方便跟踪
+	RequestURL    string //从Request中拆分出来，方便跟踪
+	Request       string //请求头
+	Response      string //回复头
+	HTML          string //正式的返回内容
 }
 
 //参数
@@ -199,7 +205,20 @@ func (this *ChromeExtendWebDriver) GetCurProxyDatas(URL string) (data []ProxyDat
 	for _, fileName := range fileNames {
 		b, err := ioutil.ReadFile(fileName)
 		if err == nil {
-			data = append(data, ProxyData{string(b), file.FileName(fileName)})
+			arr := strings.Split(string(b), `------HTTP_PROXY_SPLIT------`)
+			var RequestMethod, RequestURL, Request, Response, HTML string
+			if len(arr) == 3 {
+				Request = arr[0]
+				Response = arr[1]
+				HTML = arr[2]
+				//数据用换行进行分隔
+				arr2 := strings.Split(strings.Split(Request, "\r\n")[0], " ")
+				if len(arr2) == 3 {
+					RequestMethod = arr2[0]
+					RequestURL = arr2[1]
+				}
+			}
+			data = append(data, ProxyData{string(b), file.FileName(fileName), RequestMethod, RequestURL, Request, Response, HTML})
 		}
 	}
 	if len(data) == 0 {
@@ -207,9 +226,34 @@ func (this *ChromeExtendWebDriver) GetCurProxyDatas(URL string) (data []ProxyDat
 	}
 	//从大到小排序
 	sort.Slice(data, func(i, j int) bool {
-		return data[i].fileName < data[i].fileName
+		return data[i].FileName < data[i].FileName
 	})
 	return
+}
+
+/*
+从header或其它地方拆分出所需要的内容
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9
+Connection: keep-alive
+Content-Length: 885
+Content-Type: text/plain;charset=UTF-8
+Cookie: dtCookie=-13$K1KGLL0A5K59O4D3ERSVD4EM2T5GGT80
+*/
+func (this *ChromeExtendWebDriver) GetValFrom(RequestOrResponse string, key string) string {
+	equal, newLine := ": ", "\r\n"
+	if RequestOrResponse != "" {
+		for _, line := range strings.Split(RequestOrResponse, newLine) {
+			pos := strings.Index(line, equal)
+			if pos > 0 {
+				curKey := line[:pos]
+				if curKey == key {
+					return line[pos+1:]
+				}
+			}
+		}
+	}
+	return ""
 }
 
 //ChromeExtendWebDriver的扩展函数
