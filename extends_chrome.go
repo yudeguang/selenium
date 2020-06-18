@@ -5,9 +5,11 @@ import (
 	"github.com/yudeguang/file"
 	"github.com/yudeguang/selenium/chrome"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -128,17 +130,17 @@ func newChromeSessionFromFile(proxyAddr string, args ...interface{}) (*ChromeExt
 func getProxyDataDir() (string, error) {
 	resp, err := http.Get("http://127.0.0.1:9006/programadress")
 	if err != nil {
-		return
+		return "", err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return
+		return "", err
 	}
 	if string(body) == "" {
 		err = fmt.Errorf("programadress not find")
 	}
-	return filepath.Join(string(body), temp_proxy_data), nil
+	return filepath.Join(string(body), "temp_proxy_data"), nil
 }
 
 // //代理服务器存储数据的临时目录地址，如果后续需要获取网页head等内容，需要增加此属性,一般是自动实现
@@ -148,13 +150,13 @@ func getProxyDataDir() (string, error) {
 
 //检察ProxyDataDir是否设置正确
 func (this *ChromeExtendWebDriver) checktProxyDataDir() error {
-	if this.ProxyDataDir {
+	if this.ProxyDataDir == "" {
 		return fmt.Errorf("请使用SetProxyDataDir函数指定代理服务临时地址")
 	}
 	if !file.Exist(this.ProxyDataDir) {
 		return fmt.Errorf("代理服务临时地址指定错误:" + this.ProxyDataDir)
 	}
-
+	return nil
 }
 
 //删除旧文件,一般在请求某个URL之前调用此函数,以防止后续获取数据时获取到的数据混杂先前其它请求的数据
@@ -192,10 +194,10 @@ func (this *ChromeExtendWebDriver) GetCurProxyDatas(URL string) (data []ProxyDat
 	}
 	fileNames, err := file.GetFileListJustCurrentDirBySuffix(filepath.Join(this.ProxyDataDir, u.Host), ".txt")
 	if err != nil {
-		return err
+		return
 	}
 	for _, fileName := range fileNames {
-		b, err := ioutil.ReadFile(filename)
+		b, err := ioutil.ReadFile(fileName)
 		if err == nil {
 			data = append(data, ProxyData{string(b), file.FileName(fileName)})
 		}
@@ -205,7 +207,7 @@ func (this *ChromeExtendWebDriver) GetCurProxyDatas(URL string) (data []ProxyDat
 	}
 	//从大到小排序
 	sort.Slice(data, func(i, j int) bool {
-		return data[i].fileName > data.fileName
+		return data[i].fileName < data[i].fileName
 	})
 	return
 }
