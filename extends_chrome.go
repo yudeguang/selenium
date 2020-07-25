@@ -72,9 +72,10 @@ func newChromeSessionFromFile(proxyAddr string, args ...interface{}) (*ChromeExt
 		}
 	}
 	if capabilities == nil {
-		prefs := map[string]interface{}{ //禁止图片加载，加快渲染速度
-			"profile.managed_default_content_settings.images": 2,
-		}
+		prefs := make(map[string]interface{}) //改为默认加载图片，免得有时候会用到
+		// prefs := map[string]interface{}{ //禁止图片加载，加快渲染速度
+		// 	"profile.managed_default_content_settings.images": 2,
+		// }
 		chromeCaps := chrome.Capabilities{
 			Prefs:        prefs,
 			DebuggerAddr: "",
