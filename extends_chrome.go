@@ -84,9 +84,11 @@ func newChromeSessionFromFile(proxyAddr string, args ...interface{}) (*ChromeExt
 		if proxyAddr != "" { //加入默认的端口代理,9005
 			chromeCaps.Args = []string{"/proxy-server=http://" + proxyAddr}
 		}
+		chromeCaps.ExcludeSwitches = []string{"enable-automation"}
 		capabilities = Capabilities{"browserName": "chrome"}
 		capabilities.AddChrome(chromeCaps)
 	}
+
 	//判断urlPrefix
 	var urlPrefix = DefaultURLPrefix
 	if len(args) > 1 {
@@ -130,6 +132,7 @@ func newChromeSessionFromFile(proxyAddr string, args ...interface{}) (*ChromeExt
 		remoteWD:     wd.(*remoteWD),
 		ProxyDataDir: ProxyDataDir,
 	}
+
 	return extDriver, nil
 }
 
